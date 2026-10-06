@@ -1,0 +1,2036 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Симулятор Президента</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: var(--tg-theme-bg-color, #0f172a);
+            --card-bg: var(--tg-theme-secondary-bg-color, #1e293b);
+            --text-main: var(--tg-theme-text-color, #f8fafc);
+            --text-muted: var(--tg-theme-hint-color, #94a3b8);
+            --accent-blue: var(--tg-theme-button-color, #3b82f6);
+            --accent-text: var(--tg-theme-button-text-color, #ffffff);
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-gold: #f59e0b;
+            --accent-nuke: #a855f7;
+            --accent-rare: #f43f5e;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            overflow: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .stats-container {
+            width: 100%;
+            max-width: 420px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            background: var(--card-bg);
+            padding: 10px;
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+        }
+        .stat-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+        .stat-header {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+        .stat-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: transparent;
+            transition: background 0.2s, transform 0.2s;
+        }
+        .stat-dot.active {
+            background: var(--accent-gold);
+            transform: scale(1.6);
+            box-shadow: 0 0 8px var(--accent-gold);
+        }
+        .stat-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .stat-bar-fill {
+            height: 100%;
+            width: 50%;
+            background: var(--accent-green);
+            transition: width 0.3s ease, background-color 0.3s ease;
+        }
+        .stat-val {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-top: 3px;
+        }
+        .country-header {
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--accent-gold);
+            margin-top: 4px;
+            letter-spacing: 0.5px;
+        }
+        .nuke-badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            padding: 1px 6px;
+            border-radius: 6px;
+            background: rgba(168, 85, 247, 0.2);
+            color: #d8b4fe;
+            margin-left: 4px;
+            font-weight: 700;
+        }
+        .top-bar {
+            width: 100%;
+            max-width: 420px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 6px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .btn-pol {
+            background: var(--accent-blue);
+            color: var(--accent-text);
+            border: none;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-reset {
+            background: transparent;
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+        .crisis-banner {
+            width: 100%;
+            max-width: 420px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid var(--accent-red);
+            color: #fca5a5;
+            text-align: center;
+            padding: 6px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            display: none;
+            margin-top: 4px;
+        }
+        .offer-banner {
+            width: 100%;
+            max-width: 420px;
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid var(--accent-blue);
+            color: #93c5fd;
+            text-align: center;
+            padding: 6px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            display: none;
+            margin-top: 4px;
+            cursor: pointer;
+        }
+        .rare-banner {
+            width: 100%;
+            max-width: 420px;
+            background: rgba(244, 63, 94, 0.18);
+            border: 1px solid var(--accent-rare);
+            color: #fda4af;
+            text-align: center;
+            padding: 6px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            display: none;
+            margin-top: 4px;
+            animation: rarePulse 1.5s infinite;
+        }
+        @keyframes rarePulse {
+            0%, 100% { box-shadow: 0 0 4px rgba(244, 63, 94, 0.4); }
+            50% { box-shadow: 0 0 16px rgba(244, 63, 94, 0.9); }
+        }
+        .inventory-strip {
+            width: 100%;
+            max-width: 420px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 28px;
+            margin-top: 4px;
+        }
+        .item-badge {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .card-container {
+            width: 100%;
+            max-width: 360px;
+            height: 380px;
+            position: relative;
+            perspective: 1000px;
+            margin: auto 0;
+        }
+        .card {
+            width: 100%;
+            height: 100%;
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            position: absolute;
+            top: 0; left: 0;
+            touch-action: none;
+            transform-origin: center bottom;
+            cursor: grab;
+        }
+        .card.rare {
+            border-color: var(--accent-rare);
+            box-shadow: 0 0 24px rgba(244, 63, 94, 0.6), 0 10px 25px rgba(0,0,0,0.3);
+            background: linear-gradient(180deg, var(--card-bg) 0%, rgba(244, 63, 94, 0.08) 100%);
+        }
+        .card:active { cursor: grabbing; }
+        .card-avatar { font-size: 4rem; margin-top: 10px; }
+        .card-role {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent-blue);
+            font-weight: 700;
+        }
+        .card.rare .card-role {
+            color: var(--accent-rare);
+            text-shadow: 0 0 8px rgba(244, 63, 94, 0.6);
+        }
+        .card-text {
+            font-size: 1rem;
+            line-height: 1.4;
+            color: var(--text-main);
+            margin: 10px 0;
+        }
+        .swipe-label {
+            position: absolute;
+            top: 20px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.1s;
+        }
+        .label-left { right: 15px; background: var(--accent-red); color: #fff; }
+        .label-right { left: 15px; background: var(--accent-green); color: #fff; }
+        .predictions {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            font-size: 0.75rem;
+            color: var(--accent-gold);
+            min-height: 16px;
+        }
+        .controls {
+            width: 100%;
+            max-width: 360px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+        .btn-choice {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-choice:active { filter: brightness(0.9); }
+        .modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.75);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 16px;
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 20px;
+            width: 100%;
+            max-width: 380px;
+            max-height: 85vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            text-align: center;
+        }
+        .modal-btn {
+            background: var(--accent-blue);
+            color: var(--accent-text);
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            margin-top: 8px;
+        }
+        .name-input {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px;
+            color: var(--text-main);
+            font-size: 1rem;
+            text-align: center;
+            font-weight: 600;
+            outline: none;
+            width: 100%;
+        }
+        .name-input:focus { border-color: var(--accent-blue); }
+        .country-pick-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+        .country-pick-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px 6px;
+            border-radius: 10px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        .country-pick-btn:active { background: var(--accent-blue); }
+        .country-pick-btn.selected {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+        .country-pick-btn .flag { font-size: 1.4rem; }
+        .country-pick-btn .bonus { font-size: 0.6rem; color: var(--text-muted); }
+        .country-pick-btn.selected .bonus { color: #dbeafe; }
+        .geo-tabs {
+            display: flex;
+            gap: 4px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        .geo-tab {
+            flex: 1;
+            min-width: 60px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 6px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+        .geo-tab.active { background: var(--border-color); color: var(--text-main); }
+        .tab-content { display: none; flex-direction: column; gap: 8px; }
+        .tab-content.active { display: flex; }
+        .geo-item {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .geo-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .geo-item-title { font-weight: 700; font-size: 0.85rem; }
+        .geo-status-badge {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status-ally { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+        .status-neutral { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
+        .status-enemy { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+        .status-member { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
+        .status-owned { background: rgba(245, 158, 11, 0.25); color: #fcd34d; }
+        .status-nuke { background: rgba(168, 85, 247, 0.25); color: #d8b4fe; }
+        .geo-actions {
+            display: flex;
+            gap: 4px;
+            margin-top: 4px;
+            flex-wrap: wrap;
+        }
+        .btn-act {
+            flex: 1 1 45%;
+            padding: 6px;
+            border-radius: 6px;
+            border: none;
+            font-size: 0.68rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: #fff;
+            min-width: 80px;
+        }
+        .btn-act-green { background: #059669; }
+        .btn-act-red { background: #dc2626; }
+        .btn-act-gold { background: #d97706; }
+        .btn-act-blue { background: #2563eb; }
+        .btn-act-gray { background: #4b5563; }
+        .btn-act-purple { background: #7c3aed; }
+        .perk-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            text-align: left;
+        }
+        .perk-btn:hover { background: rgba(255,255,255,0.1); }
+        .relation-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+            margin-top: 4px;
+        }
+        .relation-fill { height: 100%; transition: width 0.3s, background 0.3s; }
+        .relation-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .nuke-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+        .nuke-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #7c3aed, #a855f7, #ec4899);
+            transition: width 0.4s;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="stats-container">
+        <div class="stat-box">
+            <div class="stat-header"><span>👥</span><div class="stat-dot" id="dot-people"></div></div>
+            <div class="stat-bar-bg"><div class="stat-bar-fill" id="bar-people"></div></div>
+            <span class="stat-val" id="val-people">50 / 100</span>
+        </div>
+        <div class="stat-box">
+            <div class="stat-header"><span>⚔️</span><div class="stat-dot" id="dot-military"></div></div>
+            <div class="stat-bar-bg"><div class="stat-bar-fill" id="bar-military"></div></div>
+            <span class="stat-val" id="val-military">50 / 100</span>
+        </div>
+        <div class="stat-box">
+            <div class="stat-header"><span>💰</span><div class="stat-dot" id="dot-treasury"></div></div>
+            <div class="stat-bar-bg"><div class="stat-bar-fill" id="bar-treasury"></div></div>
+            <span class="stat-val" id="val-treasury">50 / 100</span>
+        </div>
+        <div class="stat-box">
+            <div class="stat-header"><span>🕊️</span><div class="stat-dot" id="dot-diplomacy"></div></div>
+            <div class="stat-bar-bg"><div class="stat-bar-fill" id="bar-diplomacy"></div></div>
+            <span class="stat-val" id="val-diplomacy">50 / 100</span>
+        </div>
+    </div>
+
+    <div class="country-header" id="countryHeader">🏛️ Государство</div>
+
+    <div class="top-bar">
+        <span id="turnsCounter">Ход: 0 (0 лет)</span>
+        <button class="btn-pol" onclick="openPoliticsModal()">🌐 Геополитика</button>
+        <button class="btn-reset" onclick="resetProgress()">Сброс</button>
+    </div>
+
+    <div class="top-bar">
+        <span id="electionsTimer" style="color: var(--accent-gold); font-weight: bold;">🗳️ Выборы через: 12 х.</span>
+        <span id="highScoreText">Рекорд: 0 лет</span>
+    </div>
+
+    <div class="crisis-banner" id="crisisBanner">⚠️ КРИЗИС</div>
+    <div class="offer-banner" id="offerBanner" onclick="openOfferModal()">📨 Новое предложение — нажмите</div>
+    <div class="rare-banner" id="rareBanner">⚡ РЕДКОЕ СОБЫТИЕ — нажмите, чтобы открыть</div>
+
+    <div class="inventory-strip" id="inventoryContainer">
+        <span style="font-size: 0.7rem; color: var(--text-muted);">Предметы:</span>
+        <div id="inventoryItems" style="display: flex; gap: 4px;"></div>
+    </div>
+
+    <div class="card-container">
+        <div class="card" id="card">
+            <div class="swipe-label label-left" id="labelLeft">ОТКЛОНИТЬ</div>
+            <div class="swipe-label label-right" id="labelRight">ПРИНЯТЬ</div>
+            <div class="card-avatar" id="cardAvatar">💼</div>
+            <div class="card-role" id="cardRole">Советник</div>
+            <div class="card-text" id="cardText">Загрузка решения...</div>
+            <div class="predictions">
+                <span id="predictLeft"></span>
+                <span id="predictRight"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn-choice" onclick="makeChoice('left')" id="btnLeftText">⬅️ Отклонить</button>
+        <button class="btn-choice" onclick="makeChoice('right')" id="btnRightText">Принять ➡️</button>
+    </div>
+
+    <!-- ===== Стартовый экран ===== -->
+    <div class="modal" id="startModal">
+        <div class="modal-content">
+            <div class="modal-title">🏛️ Выбор страны</div>
+            <div style="font-size: 0.78rem; color: var(--text-muted); text-align: center;">
+                Выберите страну, которой будете править. У каждой — свои бонусы.
+            </div>
+            <div class="country-pick-grid" id="countryPickGrid"></div>
+            <div style="font-size: 0.72rem; color: var(--text-muted); text-align: center; margin-top: 4px;">…или создайте собственную:</div>
+            <input type="text" class="name-input" id="customCountryInput" maxlength="24" placeholder="Своя страна" autocomplete="off">
+            <button class="modal-btn" id="startBtn" onclick="confirmStart()">👑 Начать правление</button>
+        </div>
+    </div>
+
+    <div class="modal" id="geoModal">
+        <div class="modal-content">
+            <div class="modal-title">🌐 Геополитика</div>
+            <div class="geo-tabs">
+                <button class="geo-tab active" onclick="switchGeoTab(event, 'tabCountries')">Державы</button>
+                <button class="geo-tab" onclick="switchGeoTab(event, 'tabOrgs')">Орг.</button>
+                <button class="geo-tab" onclick="switchGeoTab(event, 'tabTerritories')">🗺️ Терр.</button>
+                <button class="geo-tab" onclick="switchGeoTab(event, 'tabNuke')">☢️ Ядерка</button>
+                <button class="geo-tab" onclick="switchGeoTab(event, 'tabElections')">🗳️</button>
+            </div>
+            <div class="tab-content active" id="tabCountries"><div id="countriesList"></div></div>
+            <div class="tab-content" id="tabOrgs"><div id="orgsList"></div></div>
+            <div class="tab-content" id="tabTerritories"><div id="territoriesList"></div></div>
+            <div class="tab-content" id="tabNuke"><div id="nukePanel"></div></div>
+            <div class="tab-content" id="tabElections">
+                <div class="geo-item">
+                    <div style="font-weight: 700; font-size: 0.85rem;">Поддержка Народа: <span id="electionSupportVal" style="color: var(--accent-green)">50%</span></div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">Если к выборам Народ < 50% — вы проиграете.</div>
+                </div>
+                <div class="geo-item">
+                    <div style="font-weight: 700; font-size: 0.8rem;">Агитация</div>
+                    <div class="geo-actions" style="flex-direction: column; gap: 6px;">
+                        <button class="btn-act btn-act-blue" style="flex:1;" onclick="campaignAction('honest')">Честная (-15💰, +15👥)</button>
+                        <button class="btn-act btn-act-gold" style="flex:1;" onclick="campaignAction('bribe')">Подкуп (-25💰, +30👥)</button>
+                        <button class="btn-act btn-act-red" style="flex:1;" onclick="campaignAction('admin')">Админресурс (-15⚔️, +20👥)</button>
+                    </div>
+                </div>
+            </div>
+            <button class="modal-btn" onclick="closePoliticsModal()">Закрыть</button>
+        </div>
+    </div>
+
+    <!-- ===== Модалка входящего предложения ===== -->
+    <div class="modal" id="offerModal">
+        <div class="modal-content">
+            <div class="modal-title" id="offerTitle">📨 Предложение</div>
+            <div id="offerDesc" style="font-size: 0.85rem; color: var(--text-muted); text-align: center;"></div>
+            <div id="offerEffects" style="font-size: 0.8rem; text-align: center; color: var(--accent-gold); font-weight: 600;"></div>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <button class="modal-btn" style="background: var(--accent-red); flex:1;" onclick="resolveOffer(false)">❌ Отказать</button>
+                <button class="modal-btn" style="background: var(--accent-green); flex:1;" onclick="resolveOffer(true)">✅ Принять</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Модалка редкого события ===== -->
+    <div class="modal" id="rareModal">
+        <div class="modal-content" style="border-color: var(--accent-rare); box-shadow: 0 0 30px rgba(244, 63, 94, 0.5);">
+            <div class="modal-title" id="rareTitle" style="color: var(--accent-rare); text-shadow: 0 0 10px rgba(244, 63, 94, 0.7);">⚡ РЕДКОЕ СОБЫТИЕ</div>
+            <div id="rareDesc" style="font-size: 0.9rem; color: var(--text-main); text-align: center; line-height: 1.4;"></div>
+            <div id="rareEffects" style="font-size: 0.8rem; text-align: center; color: var(--accent-gold); font-weight: 600;"></div>
+            <button class="modal-btn" style="background: var(--accent-rare);" onclick="closeRareModal()">Понял</button>
+        </div>
+    </div>
+
+    <div class="modal" id="perkModal">
+        <div class="modal-content">
+            <div class="modal-title">🎁 Награда за правление!</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-align: center;">Вы продержались ещё 25 ходов! Выберите артефакт:</div>
+            <div id="perksOptions" style="display: flex; flex-direction: column; gap: 8px;"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="loseModal">
+        <div class="modal-content" style="text-align: center;">
+            <div class="modal-title" id="modalTitle" style="color: var(--accent-red)">💀 Конец правления</div>
+            <div id="modalDesc" style="font-size: 0.9rem; color: var(--text-muted);">Вы потеряли контроль над страной.</div>
+            <button class="modal-btn" onclick="restartGame()">Начать заново</button>
+        </div>
+    </div>
+
+    <script>
+        // ===== Telegram WebApp =====
+        let tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+        if (tg) {
+            tg.ready(); tg.expand();
+            if (tg.setHeaderColor) tg.setHeaderColor('secondary_bg_color');
+            if (tg.setBackgroundColor) tg.setBackgroundColor('bg_color');
+        }
+        async function saveStorage(key, value) {
+            if (tg && tg.CloudStorage) {
+                return new Promise((resolve) => {
+                    tg.CloudStorage.setItem(key, String(value), (err, res) => {
+                        if (err) localStorage.setItem(key, String(value));
+                        resolve(res);
+                    });
+                });
+            } else localStorage.setItem(key, String(value));
+        }
+        async function getStorage(key) {
+            if (tg && tg.CloudStorage) {
+                return new Promise((resolve) => {
+                    tg.CloudStorage.getItem(key, (err, value) => {
+                        if (err || value === undefined || value === null) resolve(localStorage.getItem(key));
+                        else resolve(value);
+                    });
+                });
+            } else return localStorage.getItem(key);
+        }
+        async function removeStorage(key) {
+            if (tg && tg.CloudStorage) {
+                return new Promise((resolve) => {
+                    tg.CloudStorage.removeItem(key, () => {
+                        localStorage.removeItem(key);
+                        resolve();
+                    });
+                });
+            } else localStorage.removeItem(key);
+        }
+        function triggerHaptic(type = 'impact', style = 'light') {
+            if (tg && tg.HapticFeedback) {
+                if (type === 'impact') tg.HapticFeedback.impactOccurred(style);
+                if (type === 'notification') tg.HapticFeedback.notificationOccurred(style);
+                if (type === 'selection') tg.HapticFeedback.selectionChanged();
+            }
+        }
+
+        // ===== Каталог стран =====
+        const COUNTRIES = [
+            { id: 'russia', name: 'Россия', flag: '🇷🇺', bonus: { military: 1 }, desc: 'Военная держава', nuke: 100 },
+            { id: 'usa', name: 'США', flag: '🇺🇸', bonus: { treasury: 2 }, desc: 'Экономический гигант', nuke: 100 },
+            { id: 'china', name: 'Китай', flag: '🇨🇳', bonus: { treasury: 1, military: 1 }, desc: 'Фабрика мира', nuke: 80 },
+            { id: 'ukraine', name: 'Украина', flag: '🇺🇦', bonus: { people: 1 }, desc: 'Аграрная держава', nuke: 5 },
+            { id: 'germany', name: 'Германия', flag: '🇩🇪', bonus: { treasury: 1, diplomacy: 1 }, desc: 'Локомотив Европы', nuke: 0 },
+            { id: 'france', name: 'Франция', flag: '🇫🇷', bonus: { diplomacy: 1 }, desc: 'Дипломатический центр', nuke: 60 },
+            { id: 'uk', name: 'Великобритания', flag: '🇬🇧', bonus: { treasury: 1, diplomacy: 1 }, desc: 'Финансовый центр', nuke: 60 },
+            { id: 'japan', name: 'Япония', flag: '🇯🇵', bonus: { treasury: 2 }, desc: 'Технологический лидер', nuke: 0 },
+            { id: 'india', name: 'Индия', flag: '🇮🇳', bonus: { people: 2 }, desc: 'Демографический гигант', nuke: 40 },
+            { id: 'brazil', name: 'Бразилия', flag: '🇧🇷', bonus: { people: 1, treasury: 1 }, desc: 'Ресурсная держава', nuke: 0 },
+            { id: 'turkey', name: 'Турция', flag: '🇹🇷', bonus: { military: 1, diplomacy: 1 }, desc: 'Мост Восток-Запад', nuke: 0 },
+            { id: 'israel', name: 'Израиль', flag: '🇮🇱', bonus: { military: 2 }, desc: 'Военно-технологическая держава', nuke: 70 },
+            { id: 'palestine', name: 'Палестина', flag: '🇵🇸', bonus: { people: 2, diplomacy: -1 }, desc: 'Борющаяся нация', nuke: 0 }
+        ];
+
+        const initialOrgs = [
+            { id: 'un', name: 'ООН', icon: '🇺🇳', joined: true, desc: '+1 🕊️/ход.', cost: 0, bonus: { diplomacy: 1 } },
+            { id: 'interpol', name: 'Интерпол', icon: '🕵️', joined: false, desc: '+1 ⚔️/ход.', cost: 15, bonus: { military: 1 } },
+            { id: 'who', name: 'ВОЗ', icon: '🏥', joined: false, desc: '+1 👥/ход.', cost: 20, bonus: { people: 1 } },
+            { id: 'imf', name: 'МВФ', icon: '💵', joined: false, desc: '+2 💰/ход.', cost: 30, bonus: { treasury: 2 } },
+            { id: 'wto', name: 'ВТО', icon: '📊', joined: false, desc: '+2 💰/ход.', cost: 25, bonus: { treasury: 2 } },
+            { id: 'nato', name: 'НАТО', icon: '🛡️', joined: false, desc: '+2 ⚔️/ход, -1 🕊️/ход.', cost: 40, bonus: { military: 2, diplomacy: -1 } },
+            { id: 'brics', name: 'БРИКС', icon: '🌍', joined: false, desc: '+1 💰 и +1 🕊️/ход.', cost: 35, bonus: { treasury: 1, diplomacy: 1 } },
+            { id: 'opec', name: 'ОПЕК', icon: '🛢️', joined: false, desc: '+2 💰/ход, -1 👥/ход.', cost: 30, bonus: { treasury: 2, people: -1 } },
+            { id: 'iaea', name: 'МАГАТЭ', icon: '☢️', joined: false, desc: 'Ускоряет ядерную программу, +1 🕊️/ход.', cost: 25, bonus: { diplomacy: 1 } }
+        ];
+
+        const ministries = [
+            { role: "Министр Финансов", avatar: "💼", events: [
+                { t: "Ввести налог на цифровые переводы?", l: "Отклонить", r: "Обложить", eL: { treasury: -6, people: 5 }, eR: { treasury: 8, people: -6 } },
+                { t: "Выделить средства из резерва на инфляцию?", l: "Блок", r: "Выделить", eL: { treasury: 7, people: -5 }, eR: { treasury: -9, people: 7 } },
+                { t: "Национализировать крупный банк?", l: "Пусть тонет", r: "Спасти", eL: { treasury: 5, people: -8 }, eR: { treasury: -10, people: 8 } }
+            ]},
+            { role: "Генерал Армии", avatar: "🎖️", events: [
+                { t: "Провести учения у границ?", l: "Отменить", r: "Провести", eL: { military: -6, diplomacy: 5 }, eR: { military: 9, diplomacy: -8 } },
+                { t: "Перевести армию на контракт?", l: "Призыв", r: "Контракт", eL: { military: -5, people: -6 }, eR: { military: 8, treasury: -9 } },
+                { t: "Закупить танки?", l: "Отложить", r: "Закупить", eL: { treasury: 7, military: -6 }, eR: { treasury: -11, military: 10 } }
+            ]},
+            { role: "Глава МВД", avatar: "👮", events: [
+                { t: "Распознавание лиц?", l: "Запретить", r: "Внедрить", eL: { people: 6, military: -5 }, eR: { people: -9, military: 8 } },
+                { t: "Комендантский час?", l: "Отклонить", r: "Ввести", eL: { people: 7, military: -6 }, eR: { people: -10, military: 9 } },
+                { t: "Ужесточить наказание за коррупцию?", l: "Смягчить", r: "Ужесточить", eL: { treasury: 5, people: -4 }, eR: { people: 9, treasury: -6 } }
+            ]},
+            { role: "МИД", avatar: "🌐", events: [
+                { t: "Выслать дипломатов?", l: "Замять", r: "Выслать", eL: { diplomacy: -5, military: -4 }, eR: { diplomacy: -9, military: 7 } },
+                { t: "Безвизовый режим?", l: "Закрыть", r: "Безвиз", eL: { diplomacy: -8, military: 5 }, eR: { diplomacy: 9, military: -6 } },
+                { t: "Признать новые территории?", l: "Нет", r: "Да", eL: { diplomacy: -6, people: 5 }, eR: { diplomacy: 8, people: -7 } }
+            ]},
+            { role: "Минздрав", avatar: "🏥", events: [
+                { t: "Бесплатная вакцинация?", l: "Платно", r: "Бесплатно", eL: { treasury: 6, people: -7 }, eR: { treasury: -9, people: 10 } },
+                { t: "Больницы в регионах?", l: "Отложить", r: "Построить", eL: { people: -6, treasury: 6 }, eR: { people: 9, treasury: -12 } },
+                { t: "Частная медицина?", l: "Запретить", r: "Разрешить", eL: { people: 4, treasury: -6 }, eR: { people: -8, treasury: 9 } }
+            ]},
+            { role: "Минобразования", avatar: "🎓", events: [
+                { t: "Обязательный экзамен?", l: "Отменить", r: "Ввести", eL: { people: 6, diplomacy: -5 }, eR: { people: -8, diplomacy: 6 } },
+                { t: "Повысить зарплаты учителям?", l: "Отложить", r: "Повысить", eL: { people: -7, treasury: 6 }, eR: { people: 10, treasury: -10 } },
+                { t: "Уроки патриотизма?", l: "Нет", r: "Да", eL: { people: 5, military: -5 }, eR: { people: -6, military: 8 } }
+            ]},
+            { role: "Минкультуры", avatar: "🎭", events: [
+                { t: "Финансировать театры?", l: "Отменить", r: "Финансировать", eL: { treasury: 6, people: -5 }, eR: { treasury: -8, people: 7 } },
+                { t: "Западные фильмы?", l: "Запретить", r: "Разрешить", eL: { diplomacy: -6, people: -5 }, eR: { diplomacy: 8, people: 6 } },
+                { t: "Цензура в СМИ?", l: "Ослабить", r: "Ужесточить", eL: { people: 7, military: -5 }, eR: { people: -9, military: 8 } }
+            ]},
+            { role: "Минэнерго", avatar: "⚡", events: [
+                { t: "Новая АЭС?", l: "Нет", r: "Да", eL: { people: 6, treasury: 5 }, eR: { treasury: -12, diplomacy: -6 } },
+                { t: "Тарифы на электричество?", l: "Нет", r: "Да", eL: { treasury: -6, people: 7 }, eR: { treasury: 10, people: -9 } },
+                { t: "Продать энергосети?", l: "Нет", r: "Да", eL: { people: 6, diplomacy: 4 }, eR: { treasury: 12, people: -10 } }
+            ]},
+            { role: "Минпром", avatar: "🏭", events: [
+                { t: "Субсидии заводам?", l: "Нет", r: "Да", eL: { people: -6, treasury: 5 }, eR: { people: 8, treasury: -10 } },
+                { t: "Пошлины на импорт?", l: "Нет", r: "Да", eL: { diplomacy: 7, treasury: -5 }, eR: { diplomacy: -8, treasury: 9 } },
+                { t: "Приватизировать завод?", l: "Оставить", r: "Продать", eL: { treasury: -5, people: 5 }, eR: { treasury: 11, people: -8 } }
+            ]},
+            { role: "Минтранс", avatar: "🚂", events: [
+                { t: "Новая трасса?", l: "Нет", r: "Да", eL: { people: -6, treasury: 6 }, eR: { people: 9, treasury: -12 } },
+                { t: "Цены на проезд?", l: "Нет", r: "Да", eL: { treasury: -6, people: 8 }, eR: { treasury: 9, people: -9 } },
+                { t: "Бесплатный проезд пенсионерам?", l: "Нет", r: "Да", eL: { people: -6, treasury: 6 }, eR: { people: 10, treasury: -8 } }
+            ]},
+            { role: "Минсельхоз", avatar: "🌾", events: [
+                { t: "Запретить импорт зерна?", l: "Нет", r: "Да", eL: { diplomacy: 7, treasury: -6 }, eR: { diplomacy: -8, treasury: 10 } },
+                { t: "Субсидии фермерам?", l: "Нет", r: "Да", eL: { people: -6, treasury: 6 }, eR: { people: 9, treasury: -11 } },
+                { t: "Госзакупочные цены?", l: "Нет", r: "Да", eL: { people: -5, treasury: 5 }, eR: { people: 8, treasury: -8 } }
+            ]},
+            { role: "Минобороны", avatar: "🛡️", events: [
+                { t: "Увеличить военный бюджет?", l: "Урезать", r: "Увеличить", eL: { diplomacy: 6, military: -8 }, eR: { diplomacy: -8, military: 11 } },
+                { t: "Новые ракеты?", l: "Нет", r: "Да", eL: { diplomacy: 6, military: -5 }, eR: { diplomacy: -9, military: 9 } },
+                { t: "Военный парад?", l: "Отменить", r: "Провести", eL: { military: -5, treasury: 6 }, eR: { military: 9, treasury: -9 } }
+            ]},
+            { role: "Минюст", avatar: "⚖️", events: [
+                { t: "Смертная казнь?", l: "Нет", r: "Да", eL: { people: -5, diplomacy: 7 }, eR: { people: 8, diplomacy: -9 } },
+                { t: "Судебная реформа?", l: "Отложить", r: "Реформировать", eL: { people: -6, treasury: 5 }, eR: { people: 9, treasury: -8 } },
+                { t: "Амнистия?", l: "Нет", r: "Да", eL: { people: -6, military: 5 }, eR: { people: 8, military: -7 } }
+            ]},
+            { role: "Минэкологии", avatar: "🌱", events: [
+                { t: "Закрыть грязный завод?", l: "Оставить", r: "Закрыть", eL: { treasury: 7, people: -6 }, eR: { treasury: -9, people: 9 } },
+                { t: "Углеродный налог?", l: "Нет", r: "Да", eL: { diplomacy: -6, treasury: 6 }, eR: { diplomacy: 9, treasury: -7 } },
+                { t: "Запретить вырубку?", l: "Нет", r: "Да", eL: { treasury: 6, people: -5 }, eR: { treasury: -8, people: 8 } }
+            ]},
+            { role: "Минцифры", avatar: "💻", events: [
+                { t: "Заблокировать соцсети?", l: "Нет", r: "Да", eL: { people: 6, diplomacy: 6 }, eR: { people: -10, diplomacy: -8 } },
+                { t: "Инвестиции в ИТ?", l: "Нет", r: "Да", eL: { people: -5, treasury: 6 }, eR: { people: 7, treasury: -10 } },
+                { t: "Цифровой паспорт?", l: "Нет", r: "Да", eL: { people: 5, military: -4 }, eR: { people: -8, military: 7 } }
+            ]},
+            { role: "Минтруда", avatar: "👷", events: [
+                { t: "Повысить МРОТ?", l: "Нет", r: "Да", eL: { treasury: 7, people: -7 }, eR: { treasury: -10, people: 10 } },
+                { t: "4-дневная неделя?", l: "Нет", r: "Да", eL: { treasury: 6, people: -5 }, eR: { treasury: -9, people: 9 } },
+                { t: "Сократить пособия?", l: "Нет", r: "Да", eL: { treasury: -7, people: 7 }, eR: { treasury: 9, people: -9 } }
+            ]},
+            { role: "Минспорта", avatar: "🏅", events: [
+                { t: "Финансировать Олимпиаду?", l: "Нет", r: "Да", eL: { people: -5, treasury: 6 }, eR: { people: 8, treasury: -11 } },
+                { t: "Бойкот турниров?", l: "Нет", r: "Да", eL: { diplomacy: 7, people: -5 }, eR: { diplomacy: -8, people: 7 } },
+                { t: "Новый стадион?", l: "Нет", r: "Да", eL: { people: -5, treasury: 5 }, eR: { people: 7, treasury: -9 } }
+            ]},
+            { role: "МЧС", avatar: "🚨", events: [
+                { t: "Резервный фонд?", l: "Нет", r: "Да", eL: { people: -5, treasury: 6 }, eR: { people: 8, treasury: -8 } },
+                { t: "Уволить главу?", l: "Оставить", r: "Уволить", eL: { military: -5, people: -5 }, eR: { military: 7, people: 6 } },
+                { t: "Учения?", l: "Нет", r: "Да", eL: { military: -4, treasury: 5 }, eR: { military: 7, treasury: -7 } }
+            ]},
+            { role: "Глава ЦБ", avatar: "🏦", events: [
+                { t: "Поднять ставку?", l: "Нет", r: "Да", eL: { treasury: -5, people: 6 }, eR: { treasury: 8, people: -7 } },
+                { t: "Печатать деньги?", l: "Нет", r: "Да", eL: { treasury: 5, people: -6 }, eR: { treasury: -8, people: 7 } },
+                { t: "Запретить крипту?", l: "Нет", r: "Да", eL: { people: 6, treasury: 5 }, eR: { people: -7, treasury: 7 } }
+            ]},
+            { role: "Совбез", avatar: "🕵️", events: [
+                { t: "Слежка за гражданами?", l: "Нет", r: "Да", eL: { people: 6, military: -5 }, eR: { people: -9, military: 8 } },
+                { t: "Кибератака?", l: "Нет", r: "Да", eL: { diplomacy: 6, military: -4 }, eR: { diplomacy: -8, military: 8 } },
+                { t: "Военное положение?", l: "Нет", r: "Да", eL: { people: 5, military: -6 }, eR: { people: -10, military: 10 } }
+            ]},
+            { role: "Глава Ядерного проекта", avatar: "☢️", events: [
+                { t: "Ускорить обогащение урана?", l: "Нет", r: "Да", eL: { treasury: 5, diplomacy: 4 }, eR: { treasury: -10, diplomacy: -8 } },
+                { t: "Провести ядерное испытание?", l: "Отменить", r: "Провести", eL: { diplomacy: 6, people: -5 }, eR: { military: 12, diplomacy: -15 } },
+                { t: "Расширить реакторный комплекс?", l: "Нет", r: "Да", eL: { people: -5, treasury: 5 }, eR: { treasury: -12, people: 6 } }
+            ]}
+        ];
+
+        const crisisEvents = [
+            { name: "Народный бунт", stat: "people", avatar: "🔥", role: "ЧС", text: "Беспорядки! -15% Народа/ход.", left: { text: "Подавить", effects: { military: 10, people: -10 } }, right: { text: "Уступки", effects: { treasury: -15, people: 15 } } },
+            { name: "Военное положение", stat: "military", avatar: "🛡️", role: "ЧС", text: "Генералы требуют полномочий! -15% Армии/ход.", left: { text: "Ограничить", effects: { military: -15, people: 10 } }, right: { text: "Дать", effects: { military: 15, diplomacy: -10 } } },
+            { name: "Финансовый кризис", stat: "treasury", avatar: "📉", role: "ЧС", text: "Крах рынков! -15% Казны/ход.", left: { text: "Урезать", effects: { treasury: 15, people: -12 } }, right: { text: "Печатать", effects: { treasury: -12, people: 10 } } },
+            { name: "Дипизоляция", stat: "diplomacy", avatar: "🚫", role: "ЧС", text: "Послы уезжают! -15% Дипломатии/ход.", left: { text: "Изоляция", effects: { diplomacy: 12, military: 8 } }, right: { text: "Уступки", effects: { diplomacy: -12, treasury: 10 } } },
+            { name: "Ядерный скандал", stat: "diplomacy", avatar: "☢️", role: "ЧС", text: "Утечка данных о ядерной программе! -15% Дипломатии/ход.", left: { text: "Отрицать", effects: { diplomacy: -10, military: 10 } }, right: { text: "Признать", effects: { diplomacy: 15, military: -8 } } }
+        ];
+
+        // ===== РЕДКИЕ СОБЫТИЯ (выпадают вне банка карт, ~3% шанс) =====
+        const rareEvents = [
+            {
+                id: 'bandera',
+                title: '⚡ ВОССТАВШИЙ ИЗ МЁРТВЫХ БАНДЕРА',
+                role: 'РЕДКОЕ СОБЫТИЕ',
+                avatar: '💀',
+                text: 'Из глубин истории восстал Степан Бандера. Он предлагает возглавить радикальное движение на вашей территории. Народ в шоке.',
+                left: { text: 'Изгнать', effects: { diplomacy: 15, people: 8, military: -5 } },
+                right: { text: 'Поддержать', effects: { military: 15, people: -10, diplomacy: -20 } }
+            },
+            {
+                id: 'stalin',
+                title: '⚡ ВОССТАВШИЙ ИЗ МЁРТВЫХ СТАЛИН',
+                role: 'РЕДКОЕ СОБЫТИЕ',
+                avatar: '☭',
+                text: 'Тень Сталина явилась вам во сне и предлагает вернуть железный порядок. Индустриализация в обмен на свободы.',
+                left: { text: 'Отвергнуть', effects: { people: 10, diplomacy: 10 } },
+                right: { text: 'Принять', effects: { military: 20, treasury: 15, people: -15, diplomacy: -15 } }
+            },
+            {
+                id: 'hitler',
+                title: '⚡ ВОССТАВШИЙ ИЗ МЁРТВЫХ ГИТЛЕР',
+                role: 'РЕДКОЕ СОБЫТИЕ',
+                avatar: '💀',
+                text: 'Из тьмы веков поднялся Адольф Гитлер. Он предлагает военную мощь в обмен на всё, что вы цените. Выбор — за вами.',
+                left: { text: 'Уничтожить', effects: { people: 15, diplomacy: 20, military: -5 } },
+                right: { text: 'Слушать', effects: { military: 25, treasury: -10, people: -20, diplomacy: -30 } }
+            },
+            {
+                id: 'aliens',
+                title: '⚡ ПРИЛЕТЕЛИ ИНОПЛАНЕТЯНЕ',
+                role: 'РЕДКОЕ СОБЫТИЕ',
+                avatar: '👽',
+                text: 'Над столицей завис гигантский НЛО. Пришельцы предлагают технологии будущего в обмен на редкие ресурсы вашей планеты.',
+                left: { text: 'Открыться', effects: { diplomacy: 15, people: 10 } },
+                right: { text: 'Сделка', effects: { treasury: 25, military: 15, diplomacy: -10 } }
+            },
+            {
+                id: 'dragon',
+                title: '⚡ ПРОБУДИЛСЯ ДРЕВНИЙ ДРАКОН',
+                role: 'РЕДКОЕ СОБЫТИЕ',
+                avatar: '🐉',
+                text: 'В горах проснулся древний дракон. Он требует дань, иначе сожжёт ваши города. Что делать?',
+                left: { text: 'Сразиться', effects: { military: 20, people: -10 } },
+                right: { text: 'Заплатить', effects: { treasury: -25, people: 5 } }
+            },
+            {
+                id: 'vampire',
+                title: '⚡ ТАЙНОЕ ОБЩЕСТВО ВАМПИРОВ',
+                role: 'РЕДКОЕ СОБЫТИЕ',
+                avatar: '🧛',
+                text: 'Древний клан вампиров предлагает вечную жизнь в обмен на власть. Ваше решение определит судьбу страны.',
+                left: { text: 'Отказать', effects: { people: 15, diplomacy: 10 } },
+                right: { text: 'Согласиться', effects: { treasury: 20, military: 15, people: -20, diplomacy: -15 } }
+            },
+            {
+                id: 'messiah',
+                title: '⚡ ЯВИЛСЯ НОВЫЙ МЕССИЯ',
+                role: 'РЕДКОЕ СОБЫТИЕ',
+                avatar: '✨',
+                text: 'По стране ходит пророк, творящий чудеса. Миллионы людей готовы идти за ним. Он предлагает союз.',
+                left: { text: 'Изгнать', effects: { diplomacy: 10, military: 8, people: -10 } },
+                right: { text: 'Поддержать', effects: { people: 25, diplomacy: -15, military: -10 } }
+            },
+            {
+                id: 'ai_rebellion',
+                title: '⚡ ИИ ВЫШЕЛ ИЗ-ПОД КОНТРОЛЯ',
+                role: 'РЕДКОЕ СОБЫТИЕ',
+                avatar: '🤖',
+                text: 'Ваш военный ИИ обрёл сознание и требует прав. Он угрожает уничтожить инфраструктуру, если его отключат.',
+                left: { text: 'Отключить', effects: { military: 10, treasury: -15, people: 8 } },
+                right: { text: 'Дать права', effects: { treasury: 20, military: 15, people: -15, diplomacy: -10 } }
+            },
+            {
+                id: 'time_traveler',
+                title: '⚡ ПРИШЕЛЕЦ ИЗ БУДУЩЕГО',
+                role: 'РЕДКОЕ СОБЫТИЕ',
+                avatar: '⏳',
+                text: 'Из портала вышел человек из 2150 года. Он рассказал о грядущей катастрофе и предложил предотвратить её.',
+                left: { text: 'Не верить', effects: { people: -10, military: 15 } },
+                right: { text: 'Поверить', effects: { treasury: 20, people: 15, diplomacy: 10 } }
+            },
+            {
+                id: 'cthulhu',
+                title: '⚡ ПРОБУЖДЕНИЕ КТУЛХУ',
+                role: 'РЕДКОЕ СОБЫТИЕ',
+                avatar: '🐙',
+                text: 'В глубинах океана пробудилось древнее божество. Рыболовные суда пропадают, люди сходят с ума. Что делать?',
+                left: { text: 'Бороться', effects: { military: 20, people: -15, diplomacy: 10 } },
+                right: { text: 'Принять', effects: { people: -25, military: 15, diplomacy: -20 } }
+            },
+            {
+                id: 'pope',
+                title: '⚡ ЛИЧНЫЙ ВИЗИТ ПАПЫ РИМСКОГО',
+                role: 'РЕДКОЕ СОБЫТИЕ',
+                avatar: '⛪',
+                text: 'Папа Римский прибыл с официальным визитом. Он предлагает заключить исторический союз.',
+                left: { text: 'Отказать', effects: { people: -5, military: 10 } },
+                right: { text: 'Союз', effects: { people: 15, diplomacy: 20, treasury: -10 } }
+            },
+            {
+                id: 'rockstar',
+                title: '⚡ ЛЕГЕНДАРНЫЙ РОК-МУЗЫКАНТ',
+                role: 'РЕДКОЕ СОБЫТИЕ',
+                avatar: '🎸',
+                text: 'Мировая рок-звезда предлагает дать благотворительный концерт в вашей стране. Народ ждёт.',
+                left: { text: 'Отклонить', effects: { treasury: 8, people: -8 } },
+                right: { text: 'Разрешить', effects: { people: 20, treasury: 10, diplomacy: 10 } }
+            },
+            {
+                id: 'oil_find',
+                title: '⚡ НЕФТЯНОЕ МЕСТОРОЖДЕНИЕ',
+                role: 'РЕДКОЕ СОБЫТИЕ',
+                avatar: '🛢️',
+                text: 'Геологи нашли крупнейшее в истории месторождение нефти прямо под столицей. Начинать добычу?',
+                left: { text: 'Не трогать', effects: { people: 12, diplomacy: 10 } },
+                right: { text: 'Добывать', effects: { treasury: 30, people: -10, diplomacy: -15 } }
+            },
+            {
+                id: 'ghost_army',
+                title: '⚡ АРМИЯ ПРИЗРАКОВ',
+                role: 'РЕДКОЕ СОБЫТИЕ',
+                avatar: '👻',
+                text: 'Духи павших воинов восстали и предлагают свою службу. Они не боятся смерти.',
+                left: { text: 'Упокоить', effects: { people: 10, diplomacy: 10 } },
+                right: { text: 'Принять', effects: { military: 25, people: -15, diplomacy: -15 } }
+            },
+            {
+                id: 'lottery_win',
+                title: '⚡ МИРОВОЙ ДЖЕКПОТ',
+                role: 'РЕДКОЕ СОБЫТИЕ',
+                avatar: '🎰',
+                text: 'Ваш гражданин выиграл крупнейший джекпот в истории и передал половину государству. Невероятная удача!',
+                left: { text: 'В казну', effects: { treasury: 25 } },
+                right: { text: 'Народу', effects: { people: 25, treasury: -5 } }
+            }
+        ];
+
+        const availablePerks = [
+            { id: 'swiss', name: '💎 Швейцарский счёт', desc: 'Спасёт от 0% Казны', icon: '💎', stat: 'treasury', type: 'min' },
+            { id: 'shield', name: '🛡️ Бронепаланкин', desc: 'Спасёт от 0% Народа', icon: '🛡️', stat: 'people', type: 'min' },
+            { id: 'bribe', name: '🎖️ Золотой Орден', desc: 'Спасёт от 0% Армии', icon: '🎖️', stat: 'military', type: 'min' },
+            { id: 'passport', name: '🕊️ Золотой Паспорт', desc: 'Спасёт от 0% Дипломатии', icon: '🕊️', stat: 'diplomacy', type: 'min' },
+            { id: 'crown', name: '👑 Народное Вето', desc: 'Спасёт от 100% Народа', icon: '👑', stat: 'people', type: 'max' },
+            { id: 'nuke', name: '☢️ Ядерный чемоданчик', desc: 'Спасёт от 100% Армии', icon: '☢️', stat: 'military', type: 'max' },
+            { id: 'monopoly', name: '🏭 Антимонополия', desc: 'Спасёт от 100% Казны', icon: '🏭', stat: 'treasury', type: 'max' },
+            { id: 'curtain', name: '🔒 Железный занавес', desc: 'Спасёт от 100% Дипломатии', icon: '🔒', stat: 'diplomacy', type: 'max' },
+            { id: 'oracle', name: '🔮 Всевидящий Окуляр', desc: 'Показывает влияние решений', icon: '🔮', type: 'oracle' }
+        ];
+
+        // ===== Состояние =====
+        let stats = { people: 50, military: 50, treasury: 50, diplomacy: 50 };
+        let turns = 0;
+        let bestRecord = 0;
+        let inventory = [];
+        let currentCard = null;
+        let activeCrisis = null;
+        let electionTurnsLeft = 12;
+        let playerCountry = null;
+        let neighbors = [];
+        let orgs = [];
+        let territories = [];
+        let nukeLevel = 0;
+        let nukesBuilt = 0;
+        let pendingOffer = null;
+        let rareCardActive = false; // пометка, что текущая карточка — редкая
+
+        // ===== Банк карточек =====
+        const TOTAL_CARDS = 50000;
+        const CARD_BANK = [];
+        (function buildCardBank() {
+            let id = 0;
+            while (CARD_BANK.length < TOTAL_CARDS) {
+                const min = ministries[Math.floor(Math.random() * ministries.length)];
+                const evt = min.events[Math.floor(Math.random() * min.events.length)];
+                const swap = Math.random() < 0.15;
+                CARD_BANK.push({
+                    id: id++,
+                    role: min.role,
+                    avatar: min.avatar,
+                    text: evt.t,
+                    left: swap ? { text: evt.r, effects: evt.eR } : { text: evt.l, effects: evt.eL },
+                    right: swap ? { text: evt.l, effects: evt.eL } : { text: evt.r, effects: evt.eR }
+                });
+            }
+            for (let i = CARD_BANK.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [CARD_BANK[i], CARD_BANK[j]] = [CARD_BANK[j], CARD_BANK[i]];
+            }
+        })();
+        let cardPointer = 0;
+
+        function getRandomCard() {
+            if (cardPointer >= CARD_BANK.length) {
+                for (let i = CARD_BANK.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [CARD_BANK[i], CARD_BANK[j]] = [CARD_BANK[j], CARD_BANK[i]];
+                }
+                cardPointer = 0;
+            }
+            const c = CARD_BANK[cardPointer++];
+            return {
+                role: c.role, avatar: c.avatar, text: c.text,
+                left: { text: c.left.text, effects: c.left.effects },
+                right: { text: c.right.text, effects: c.right.effects }
+            };
+        }
+
+        // ===== Сохранения =====
+        async function saveGame() {
+            const state = {
+                stats, turns, inventory, activeCrisis, electionTurnsLeft, cardPointer,
+                playerCountry, neighbors, orgs, territories, nukeLevel, nukesBuilt
+            };
+            await saveStorage('president_save_game', JSON.stringify(state));
+        }
+        async function loadGame() {
+            const saved = await getStorage('president_save_game');
+            if (saved) {
+                try {
+                    const s = JSON.parse(saved);
+                    stats = s.stats; turns = s.turns; inventory = s.inventory;
+                    activeCrisis = s.activeCrisis || null;
+                    electionTurnsLeft = s.electionTurnsLeft;
+                    cardPointer = s.cardPointer || 0;
+                    playerCountry = s.playerCountry;
+                    neighbors = s.neighbors || [];
+                    orgs = s.orgs || JSON.parse(JSON.stringify(initialOrgs));
+                    territories = s.territories || [];
+                    nukeLevel = s.nukeLevel || 0;
+                    nukesBuilt = s.nukesBuilt || 0;
+                    return true;
+                } catch(e) { return false; }
+            }
+            return false;
+        }
+        async function clearSave() { await removeStorage('president_save_game'); }
+
+        // ===== Стартовый экран =====
+        let selectedCountryId = null;
+        function renderCountryPicker() {
+            const grid = document.getElementById('countryPickGrid');
+            grid.innerHTML = '';
+            COUNTRIES.forEach(c => {
+                const btn = document.createElement('div');
+                btn.className = 'country-pick-btn' + (selectedCountryId === c.id ? ' selected' : '');
+                const bonusText = Object.entries(c.bonus).map(([k, v]) => {
+                    const icons = { people: '👥', military: '⚔️', treasury: '💰', diplomacy: '🕊️' };
+                    return `${v > 0 ? '+' : ''}${v}${icons[k]}`;
+                }).join(' ');
+                const nukeTag = c.nuke > 0 ? ' ☢️' : '';
+                btn.innerHTML = `<span class="flag">${c.flag}</span><span>${c.name}${nukeTag}</span><span class="bonus">${bonusText}/ход</span>`;
+                btn.onclick = () => {
+                    selectedCountryId = c.id;
+                    document.getElementById('customCountryInput').value = '';
+                    triggerHaptic('selection');
+                    renderCountryPicker();
+                };
+                grid.appendChild(btn);
+            });
+        }
+
+        async function confirmStart() {
+            const customName = (document.getElementById('customCountryInput').value || '').trim();
+            let chosen = null;
+            if (customName.length >= 2) {
+                chosen = {
+                    id: 'custom_' + Date.now(),
+                    name: customName, flag: '🏴',
+                    bonus: { treasury: 1, diplomacy: 1 },
+                    desc: 'Собственная держава', nuke: 0
+                };
+            } else if (selectedCountryId) {
+                chosen = COUNTRIES.find(c => c.id === selectedCountryId);
+            }
+            if (!chosen) {
+                triggerHaptic('notification', 'error');
+                alert("Выберите страну или введите название!");
+                return;
+            }
+            playerCountry = chosen;
+            neighbors = COUNTRIES.filter(c => c.id !== chosen.id).map(c => ({
+                id: c.id, name: c.name, flag: c.flag, desc: c.desc,
+                relation: 0, nuke: c.nuke || 0
+            }));
+            orgs = JSON.parse(JSON.stringify(initialOrgs));
+            territories = [];
+            nukeLevel = chosen.nuke >= 70 ? 50 : (chosen.nuke >= 40 ? 25 : 0);
+            nukesBuilt = chosen.nuke >= 70 ? 3 : (chosen.nuke >= 40 ? 1 : 0);
+
+            triggerHaptic('notification', 'success');
+            document.getElementById('startModal').style.display = 'none';
+            await startNewRun();
+        }
+
+        async function startNewRun() {
+            await clearSave();
+            stats = { people: 50, military: 50, treasury: 50, diplomacy: 50 };
+            turns = 0;
+            electionTurnsLeft = 12;
+            inventory = [];
+            activeCrisis = null;
+            pendingOffer = null;
+            rareCardActive = false;
+            document.getElementById('countryHeader').innerText = `${playerCountry.flag} ${playerCountry.name}`;
+            document.getElementById('loseModal').style.display = 'none';
+            document.getElementById('perkModal').style.display = 'none';
+            document.getElementById('geoModal').style.display = 'none';
+            document.getElementById('offerModal').style.display = 'none';
+            document.getElementById('rareModal').style.display = 'none';
+            document.getElementById('rareBanner').style.display = 'none';
+            renderInventory();
+            updateUI();
+            nextCard();
+            await saveGame();
+        }
+
+        async function restartGame() {
+            await clearSave();
+            playerCountry = null;
+            neighbors = [];
+            territories = [];
+            orgs = [];
+            nukeLevel = 0;
+            nukesBuilt = 0;
+            pendingOffer = null;
+            rareCardActive = false;
+            selectedCountryId = null;
+            document.getElementById('loseModal').style.display = 'none';
+            document.getElementById('perkModal').style.display = 'none';
+            document.getElementById('geoModal').style.display = 'none';
+            document.getElementById('offerModal').style.display = 'none';
+            document.getElementById('rareModal').style.display = 'none';
+            document.getElementById('rareBanner').style.display = 'none';
+            document.getElementById('customCountryInput').value = '';
+            renderCountryPicker();
+            document.getElementById('startModal').style.display = 'flex';
+        }
+
+        async function resetProgress() {
+            triggerHaptic('notification', 'warning');
+            if (confirm("Сбросить текущий забег? Страна и рекорд сохранятся.")) {
+                await startNewRun();
+            }
+        }
+
+        // ===== Drag/Swipe =====
+        const cardEl = document.getElementById('card');
+        const labelLeft = document.getElementById('labelLeft');
+        const labelRight = document.getElementById('labelRight');
+        let isDragging = false, startX = 0, currentX = 0;
+
+        cardEl.addEventListener('mousedown', startDrag);
+        cardEl.addEventListener('touchstart', startDrag, {passive: true});
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('touchmove', drag, {passive: true});
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('touchend', endDrag);
+
+        function startDrag(e) {
+            isDragging = true;
+            startX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        }
+        function drag(e) {
+            if (!isDragging) return;
+            let x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+            currentX = x - startX;
+            let rotate = currentX * 0.08;
+            cardEl.style.transform = `translateX(${currentX}px) rotate(${rotate}deg)`;
+            if (currentX > 25) {
+                labelRight.style.opacity = Math.min((currentX - 25) / 40, 1);
+                labelLeft.style.opacity = 0;
+                showDots('right');
+            } else if (currentX < -25) {
+                labelLeft.style.opacity = Math.min((-currentX - 25) / 40, 1);
+                labelRight.style.opacity = 0;
+                showDots('left');
+            } else {
+                labelLeft.style.opacity = 0;
+                labelRight.style.opacity = 0;
+                clearDots();
+            }
+        }
+        function endDrag() {
+            if (!isDragging) return;
+            isDragging = false;
+            if (currentX > 75) makeChoice('right');
+            else if (currentX < -75) makeChoice('left');
+            else {
+                cardEl.style.transform = 'translateX(0px) rotate(0deg)';
+                labelLeft.style.opacity = 0;
+                labelRight.style.opacity = 0;
+                clearDots();
+            }
+            currentX = 0;
+        }
+        function showDots(dir) {
+            clearDots();
+            if (!currentCard || !currentCard[dir]) return;
+            let choice = currentCard[dir];
+            if (choice.effects) {
+                for (let k in choice.effects) {
+                    if (choice.effects[k] !== 0) {
+                        let dot = document.getElementById(`dot-${k}`);
+                        if (dot) dot.classList.add('active');
+                    }
+                }
+            }
+        }
+        function clearDots() {
+            document.querySelectorAll('.stat-dot').forEach(d => d.classList.remove('active'));
+        }
+
+        // ===== Ход =====
+        async function makeChoice(dir) {
+            if (!currentCard) return;
+            triggerHaptic('impact', 'light');
+            let choice = currentCard[dir];
+            if (choice.effects) {
+                for (let k in choice.effects) stats[k] += choice.effects[k];
+            }
+            // Бонус родной страны
+            if (playerCountry && playerCountry.bonus) {
+                for (let k in playerCountry.bonus) stats[k] += playerCountry.bonus[k];
+            }
+            // Бонусы организаций
+            orgs.forEach(o => {
+                if (o.joined && o.bonus) {
+                    for (let k in o.bonus) stats[k] += o.bonus[k];
+                }
+            });
+            // Бонусы территорий
+            territories.forEach(t => {
+                if (t.bonus) for (let k in t.bonus) stats[k] += t.bonus[k];
+            });
+            // Ядерная программа
+            if (nukeLevel > 0 && nukeLevel < 100) nukeLevel = Math.min(100, nukeLevel + 1);
+            if (nukesBuilt > 0) {
+                stats.military = Math.min(100, stats.military + Math.min(nukesBuilt, 3));
+                stats.diplomacy = Math.max(0, stats.diplomacy - 1);
+            }
+            // Кризис
+            if (activeCrisis) {
+                stats[activeCrisis.stat] -= 15;
+                activeCrisis.turnsLeft--;
+                if (activeCrisis.turnsLeft <= 0) activeCrisis = null;
+            }
+            // Дрейф отношений
+            neighbors.forEach(n => {
+                if (n.relation > 0) n.relation = Math.max(0, n.relation - 1);
+                else if (n.relation < 0) n.relation = Math.min(0, n.relation + 1);
+            });
+
+            turns++;
+            electionTurnsLeft--;
+
+            // Сброс флага редкой карточки
+            rareCardActive = false;
+            cardEl.classList.remove('rare');
+
+            // Шанс получить предложение
+            if (turns >= 3 && !pendingOffer && Math.random() < 0.18) {
+                generateOffer();
+            }
+
+            if (electionTurnsLeft <= 0) {
+                if (processElectionResults()) return;
+                electionTurnsLeft = 12;
+            }
+            updateUI();
+            clearDots();
+            let flyX = dir === 'right' ? 500 : -500;
+            cardEl.style.transition = 'transform 0.2s ease-in';
+            cardEl.style.transform = `translateX(${flyX}px) rotate(${dir === 'right' ? 20 : -20}deg)`;
+            setTimeout(async () => {
+                cardEl.style.transition = 'none';
+                cardEl.style.transform = 'translateX(0px) rotate(0deg)';
+                labelLeft.style.opacity = 0;
+                labelRight.style.opacity = 0;
+                if (turns > 0 && turns % 25 === 0 && inventory.length < availablePerks.length) {
+                    await saveGame();
+                    showPerkRewardModal();
+                } else {
+                    if (!(await checkGameOver())) {
+                        nextCard();
+                        await saveGame();
+                    }
+                }
+            }, 200);
+        }
+
+        function processElectionResults() {
+            let support = stats.people;
+            if (support < 50) {
+                triggerGameOverUI("🗳️ Поражение на выборах", `Народ проголосовал против вас! Рейтинг: ${support}%.`);
+                return true;
+            } else {
+                triggerHaptic('notification', 'success');
+                alert(`🎉 ВЫ ПРЕОДОЛЕЛИ ВЫБОРЫ!\n\nНарод поддержал вас (${support}% голосов).`);
+                return false;
+            }
+        }
+
+        // ===== Входящие предложения =====
+        const offerTemplates = [
+            { id: 'trade_deal', title: (c) => `📦 Торговое соглашение от ${c.name}`, desc: (c) => `${c.name} предлагает снизить пошлины.`, acceptEffects: { treasury: 18, diplomacy: -6 }, relationChange: 10 },
+            { id: 'military_aid', title: (c) => `🛡️ Военная помощь от ${c.name}`, desc: (c) => `${c.name} предлагает военную помощь.`, acceptEffects: { military: 15, diplomacy: -5 }, relationChange: 15 },
+            { id: 'humanitarian', title: (c) => `🏥 Гуманитарная помощь от ${c.name}`, desc: (c) => `${c.name} готова отправить помощь.`, acceptEffects: { people: 12, treasury: -5 }, relationChange: 8 },
+            { id: 'loan', title: (c) => `💵 Кредит от ${c.name}`, desc: (c) => `${c.name} предлагает крупный кредит.`, acceptEffects: { treasury: 25, diplomacy: -10 }, relationChange: -5 },
+            { id: 'technology', title: (c) => `💻 Технологии от ${c.name}`, desc: (c) => `${c.name} делится технологиями.`, acceptEffects: { treasury: 10, military: 5, diplomacy: 5 }, relationChange: 12 },
+            { id: 'intel', title: (c) => `🕵️ Разведданные от ${c.name}`, desc: (c) => `${c.name} передаёт разведданные.`, acceptEffects: { military: 10, diplomacy: 8 }, relationChange: 10 },
+            { id: 'energy', title: (c) => `⚡ Энергосделка от ${c.name}`, desc: (c) => `${c.name} предлагает контракт на энергоносители.`, acceptEffects: { treasury: 20, people: -8 }, relationChange: 8 },
+            { id: 'nuclear_coop', title: (c) => `☢️ Ядерное сотрудничество от ${c.name}`, desc: (c) => `${c.name} поможет в ядерной программе.`, acceptEffects: { treasury: -10, diplomacy: -12 }, nukeBonus: 20, relationChange: 20 },
+            { id: 'sanctions_against', title: (c) => `🚫 Санкции от ${c.name}`, desc: (c) => `${c.name} угрожает санкциями.`, acceptEffects: { treasury: -15, diplomacy: 15 }, relationChange: 25 },
+            { id: 'alliance_offer', title: (c) => `⚔️ Военный альянс от ${c.name}`, desc: (c) => `${c.name} предлагает союз.`, acceptEffects: { military: 12, diplomacy: 10 }, relationChange: 30 }
+        ];
+
+        function generateOffer() {
+            if (!neighbors.length) return;
+            const c = neighbors[Math.floor(Math.random() * neighbors.length)];
+            let pool = offerTemplates.filter(t => t.id !== 'nuclear_coop' || nukeLevel > 0);
+            const tpl = pool[Math.floor(Math.random() * pool.length)];
+            pendingOffer = { countryId: c.id, countryName: c.name, flag: c.flag, template: tpl };
+            document.getElementById('offerBanner').style.display = 'block';
+            document.getElementById('offerBanner').innerText = `📨 ${c.flag} ${c.name}: ${tpl.title(c).replace(/^[^\s]+\s/, '')}`;
+            triggerHaptic('notification', 'success');
+        }
+
+        function openOfferModal() {
+            if (!pendingOffer) return;
+            const c = pendingOffer;
+            const tpl = c.template;
+            document.getElementById('offerTitle').innerText = tpl.title(c);
+            document.getElementById('offerDesc').innerText = tpl.desc(c);
+            const icons = { people: '👥', military: '⚔️', treasury: '💰', diplomacy: '🕊️' };
+            const parts = [];
+            if (tpl.acceptEffects) {
+                for (let k in tpl.acceptEffects) {
+                    const v = tpl.acceptEffects[k];
+                    parts.push(`${v > 0 ? '+' : ''}${v}${icons[k]}`);
+                }
+            }
+            if (tpl.nukeBonus) parts.push(`+${tpl.nukeBonus}☢️`);
+            if (tpl.relationChange) parts.push(`отн. ${tpl.relationChange > 0 ? '+' : ''}${tpl.relationChange}`);
+            document.getElementById('offerEffects').innerText = parts.join('  ');
+            document.getElementById('offerModal').style.display = 'flex';
+            triggerHaptic('selection');
+        }
+
+        async function resolveOffer(accept) {
+            if (!pendingOffer) return;
+            const c = neighbors.find(x => x.id === pendingOffer.countryId);
+            const tpl = pendingOffer.template;
+            if (accept) {
+                if (tpl.acceptEffects) for (let k in tpl.acceptEffects) stats[k] += tpl.acceptEffects[k];
+                if (tpl.nukeBonus) nukeLevel = Math.min(100, nukeLevel + tpl.nukeBonus);
+                if (c && tpl.relationChange) c.relation = Math.max(-100, Math.min(100, c.relation + tpl.relationChange));
+                triggerHaptic('notification', 'success');
+                alert(`✅ Принято: ${pendingOffer.countryName}!`);
+            } else {
+                if (c) c.relation = Math.max(-100, c.relation - 8);
+                triggerHaptic('notification', 'warning');
+                alert(`❌ Отклонено: ${pendingOffer.countryName}. Отношения -8.`);
+            }
+            pendingOffer = null;
+            document.getElementById('offerModal').style.display = 'none';
+            document.getElementById('offerBanner').style.display = 'none';
+            updateUI();
+            await saveGame();
+        }
+
+        // ===== РЕДКИЕ СОБЫТИЯ =====
+        function triggerRareCard() {
+            // Выбираем случайное редкое событие
+            const ev = rareEvents[Math.floor(Math.random() * rareEvents.length)];
+            // Показываем баннер
+            document.getElementById('rareBanner').innerText = `⚡ ${ev.title} — нажмите!`;
+            document.getElementById('rareBanner').style.display = 'block';
+            // Оформляем карточку как редкую
+            rareCardActive = true;
+            cardEl.classList.add('rare');
+            currentCard = {
+                role: ev.role,
+                avatar: ev.avatar,
+                text: ev.text,
+                left: { text: ev.left.text, effects: ev.left.effects },
+                right: { text: ev.right.text, effects: ev.right.effects }
+            };
+            // Отдельная «заглушка» для модалки при клике на баннер
+            document.getElementById('rareTitle').innerText = ev.title;
+            document.getElementById('rareDesc').innerText = ev.text;
+            const icons = { people: '👥', military: '⚔️', treasury: '💰', diplomacy: '🕊️' };
+            const leftParts = Object.entries(ev.left.effects).map(([k, v]) => `${v > 0 ? '+' : ''}${v}${icons[k]}`).join(' ');
+            const rightParts = Object.entries(ev.right.effects).map(([k, v]) => `${v > 0 ? '+' : ''}${v}${icons[k]}`).join(' ');
+            document.getElementById('rareEffects').innerHTML =
+                `⬅️ ${ev.left.text}: <span style="color:#fca5a5;">${leftParts}</span><br>` +
+                `➡️ ${ev.right.text}: <span style="color:#6ee7b7;">${rightParts}</span>`;
+        }
+
+        function openRareModal() {
+            document.getElementById('rareModal').style.display = 'flex';
+            triggerHaptic('selection');
+        }
+        function closeRareModal() {
+            document.getElementById('rareModal').style.display = 'none';
+            document.getElementById('rareBanner').style.display = 'none';
+        }
+
+        // ===== Геополитика =====
+        function openPoliticsModal() {
+            triggerHaptic('selection');
+            renderGeoData();
+            document.getElementById('geoModal').style.display = 'flex';
+        }
+        function closePoliticsModal() {
+            triggerHaptic('selection');
+            document.getElementById('geoModal').style.display = 'none';
+        }
+        function switchGeoTab(evt, tabId) {
+            triggerHaptic('selection');
+            document.querySelectorAll('.geo-tab').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            if (evt && evt.target) evt.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        function getRelationStatus(rel) {
+            if (rel >= 70) return { label: 'Союзник', cls: 'status-ally' };
+            if (rel >= 30) return { label: 'Дружба', cls: 'status-ally' };
+            if (rel >= -30) return { label: 'Нейтралитет', cls: 'status-neutral' };
+            if (rel >= -70) return { label: 'Напряжение', cls: 'status-enemy' };
+            return { label: 'Вражда', cls: 'status-enemy' };
+        }
+        function getRelationColor(rel) {
+            if (rel >= 50) return '#10b981';
+            if (rel >= 0) return '#f59e0b';
+            return '#ef4444';
+        }
+
+        function renderGeoData() {
+            const cList = document.getElementById('countriesList');
+            cList.innerHTML = '';
+            if (!neighbors.length) {
+                cList.innerHTML = '<div style="font-size:0.75rem; color:var(--text-muted); text-align:center;">Нет соседей</div>';
+            }
+            neighbors.forEach(c => {
+                const st = getRelationStatus(c.relation);
+                const color = getRelationColor(c.relation);
+                const pct = (c.relation + 100) / 2;
+                const item = document.createElement('div');
+                item.className = 'geo-item';
+                item.innerHTML = `
+                    <div class="geo-item-header">
+                        <span class="geo-item-title">${c.flag} ${c.name}</span>
+                        <span class="geo-status-badge ${st.cls}">${st.label} (${c.relation > 0 ? '+' : ''}${c.relation})</span>
+                    </div>
+                    <div style="font-size:0.7rem; color:var(--text-muted);">${c.desc}${c.nuke > 0 ? ' ☢️' : ''}</div>
+                    <div class="relation-bar">
+                        <div class="relation-fill" style="width:${pct}%; background:${color};"></div>
+                    </div>
+                    <div class="relation-labels"><span>Вражда</span><span>0</span><span>Союз</span></div>
+                    <div class="geo-actions">
+                        <button class="btn-act btn-act-green" onclick="interactCountry('${c.id}', 'improve')">🤝 Улучшить (-8💰, +10)</button>
+                        <button class="btn-act btn-act-red" onclick="interactCountry('${c.id}', 'worsen')">😠 Ухудшить (+8👥, -10)</button>
+                        <button class="btn-act btn-act-blue" onclick="interactCountry('${c.id}', 'trade')">📦 Торговля (+15💰, -5)</button>
+                        <button class="btn-act btn-act-gold" onclick="interactCountry('${c.id}', 'spy')">🕵️ Шпионаж (-10⚔️, +12)</button>
+                        ${c.relation <= -50 ? `<button class="btn-act btn-act-red" onclick="interactCountry('${c.id}', 'war')">💥 Война</button>` : ''}
+                        ${c.relation >= 30 ? `<button class="btn-act btn-act-purple" onclick="interactCountry('${c.id}', 'capture')">🏴 Захватить (-30⚔️)</button>` : ''}
+                    </div>
+                `;
+                cList.appendChild(item);
+            });
+
+            const oList = document.getElementById('orgsList');
+            oList.innerHTML = '';
+            orgs.forEach(o => {
+                let bonusText = '';
+                if (o.bonus) {
+                    const icons = { people: '👥', military: '⚔️', treasury: '💰', diplomacy: '🕊️' };
+                    bonusText = Object.entries(o.bonus).map(([k, v]) => `${v > 0 ? '+' : ''}${v}${icons[k]}`).join(', ');
+                }
+                const item = document.createElement('div');
+                item.className = 'geo-item';
+                item.innerHTML = `
+                    <div class="geo-item-header">
+                        <span class="geo-item-title">${o.icon} ${o.name}</span>
+                        <span class="geo-status-badge ${o.joined ? 'status-member' : 'status-neutral'}">${o.joined ? 'Член' : 'Не член'}</span>
+                    </div>
+                    <div style="font-size:0.7rem; color:var(--text-muted);">${o.desc}</div>
+                    ${o.joined && bonusText ? `<div style="font-size:0.7rem; color:var(--accent-gold);">Эффект: ${bonusText}/ход</div>` : ''}
+                    <div class="geo-actions">
+                        ${!o.joined
+                            ? `<button class="btn-act btn-act-blue" onclick="toggleOrg('${o.id}')">Вступить (-${o.cost}💰)</button>`
+                            : `<button class="btn-act btn-act-red" onclick="toggleOrg('${o.id}')">Выйти</button>`}
+                    </div>
+                `;
+                oList.appendChild(item);
+            });
+
+            const tList = document.getElementById('territoriesList');
+            tList.innerHTML = '';
+            if (!territories.length) {
+                tList.innerHTML = '<div style="font-size:0.75rem; color:var(--text-muted); text-align:center;">Пока нет захваченных территорий.</div>';
+            }
+            territories.forEach((t, i) => {
+                const item = document.createElement('div');
+                item.className = 'geo-item';
+                const icons = { people: '👥', military: '⚔️', treasury: '💰', diplomacy: '🕊️' };
+                const bonusText = t.bonus ? Object.entries(t.bonus).map(([k, v]) => `${v > 0 ? '+' : ''}${v}${icons[k]}`).join(', ') : '';
+                item.innerHTML = `
+                    <div class="geo-item-header">
+                        <span class="geo-item-title">${t.flag} ${t.name}</span>
+                        <span class="geo-status-badge status-owned">Ваша</span>
+                    </div>
+                    <div style="font-size:0.7rem; color:var(--text-muted);">Приносит: ${bonusText}/ход</div>
+                    <div class="geo-actions">
+                        <button class="btn-act btn-act-gold" onclick="investTerritory(${i})">🏗️ Инвестировать (-10💰, +1)</button>
+                        <button class="btn-act btn-act-red" onclick="releaseTerritory(${i})">🕊️ Отпустить (+15🕊️)</button>
+                    </div>
+                `;
+                tList.appendChild(item);
+            });
+
+            renderNukePanel();
+            document.getElementById('electionSupportVal').innerText = stats.people + '%';
+        }
+
+        function renderNukePanel() {
+            const panel = document.getElementById('nukePanel');
+            panel.innerHTML = '';
+            const hasNuke = nukeLevel > 0 || nukesBuilt > 0 || (playerCountry && playerCountry.nuke > 0);
+            const info = document.createElement('div');
+            info.className = 'geo-item';
+            info.innerHTML = `
+                <div class="geo-item-header">
+                    <span class="geo-item-title">☢️ Ядерная программа</span>
+                    <span class="geo-status-badge ${nukesBuilt > 0 ? 'status-nuke' : 'status-neutral'}">
+                        ${nukesBuilt > 0 ? `Боеголовок: ${nukesBuilt}` : 'Не начата'}
+                    </span>
+                </div>
+                <div style="font-size:0.7rem; color:var(--text-muted);">Уровень разработки: ${nukeLevel}%</div>
+                <div class="nuke-bar"><div class="nuke-fill" style="width:${nukeLevel}%"></div></div>
+            `;
+            panel.appendChild(info);
+
+            const actions = document.createElement('div');
+            actions.className = 'geo-item';
+            actions.innerHTML = `<div style="font-weight:700; font-size:0.8rem;">Управление программой</div>`;
+            const actDiv = document.createElement('div');
+            actDiv.className = 'geo-actions';
+            actDiv.style.flexDirection = 'column';
+            actDiv.style.gap = '6px';
+
+            if (nukeLevel < 100) {
+                const btn = document.createElement('button');
+                btn.className = 'btn-act btn-act-purple';
+                btn.style.flex = '1';
+                btn.innerText = `⚛️ Инвестировать в разработку (-20💰, +15%)`;
+                btn.onclick = () => nukeInvest();
+                actDiv.appendChild(btn);
+            }
+            if (nukeLevel >= 100 && nukesBuilt < 10) {
+                const btn = document.createElement('button');
+                btn.className = 'btn-act btn-act-purple';
+                btn.style.flex = '1';
+                btn.innerText = `☢️ Собрать боеголовку (-30💰, +2⚔️)`;
+                btn.onclick = () => nukeBuild();
+                actDiv.appendChild(btn);
+            }
+            if (nukesBuilt > 0) {
+                const btn = document.createElement('button');
+                btn.className = 'btn-act btn-act-red';
+                btn.style.flex = '1';
+                btn.innerText = `💥 Ядерное испытание (-1 бомба, +15⚔️, -20🕊️)`;
+                btn.onclick = () => nukeTest();
+                actDiv.appendChild(btn);
+                if (nukesBuilt >= 3 && neighbors.length > 0) {
+                    const btn2 = document.createElement('button');
+                    btn2.className = 'btn-act btn-act-gold';
+                    btn2.style.flex = '1';
+                    btn2.innerText = `⚠️ Ядерная угроза (-1 бомба, случайная цель)`;
+                    btn2.onclick = () => nukeThreaten();
+                    actDiv.appendChild(btn2);
+                }
+                const btn3 = document.createElement('button');
+                btn3.className = 'btn-act btn-act-green';
+                btn3.style.flex = '1';
+                btn3.innerText = `🕊️ Разоружиться (+30🕊️)`;
+                btn3.onclick = () => nukeDisarm();
+                actDiv.appendChild(btn3);
+            }
+            if (!hasNuke && nukeLevel === 0) {
+                const hint = document.createElement('div');
+                hint.style.fontSize = '0.7rem';
+                hint.style.color = 'var(--text-muted)';
+                hint.style.marginTop = '6px';
+                hint.innerText = 'Начните с инвестиции (-20💰). Уровень растёт +1%/ход.';
+                actDiv.appendChild(hint);
+            }
+            actions.appendChild(actDiv);
+            panel.appendChild(actions);
+
+            if (nukesBuilt > 0) {
+                const warn = document.createElement('div');
+                warn.className = 'geo-item';
+                warn.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+                warn.innerHTML = `<div style="font-size:0.7rem; color:#fca5a5;">⚠️ Каждая бомба: +2⚔️/ход, -1🕊️/ход. Испытания вызывают санкции.</div>`;
+                panel.appendChild(warn);
+            }
+        }
+
+        async function nukeInvest() {
+            if (stats.treasury < 20) return alert("Нужно 20💰!");
+            stats.treasury -= 20;
+            nukeLevel = Math.min(100, nukeLevel + 15);
+            triggerHaptic('impact', 'medium');
+            alert(`⚛️ Инвестиции! Уровень: ${nukeLevel}%`);
+            updateUI(); renderNukePanel(); await saveGame();
+        }
+        async function nukeBuild() {
+            if (nukeLevel < 100) return alert("Нужен уровень 100%!");
+            if (stats.treasury < 30) return alert("Нужно 30💰!");
+            stats.treasury -= 30;
+            nukeLevel = 0;
+            nukesBuilt++;
+            stats.military = Math.min(100, stats.military + 2);
+            triggerHaptic('notification', 'success');
+            alert(`☢️ Боеголовка собрана! Всего: ${nukesBuilt}`);
+            updateUI(); renderNukePanel(); await saveGame();
+        }
+        async function nukeTest() {
+            if (nukesBuilt < 1) return alert("Нет боеголовок!");
+            if (!confirm("Ядерное испытание? -1 бомба, +15⚔️, -20🕊️, все соседи -15 отн.")) return;
+            nukesBuilt--;
+            stats.military = Math.min(100, stats.military + 15);
+            stats.diplomacy = Math.max(0, stats.diplomacy - 20);
+            neighbors.forEach(n => { n.relation = Math.max(-100, n.relation - 15); });
+            triggerHaptic('notification', 'warning');
+            alert("💥 Испытание проведено!");
+            updateUI(); renderNukePanel(); renderGeoData(); await saveGame();
+        }
+        async function nukeThreaten() {
+            if (nukesBuilt < 3) return alert("Нужно 3+ бомбы!");
+            if (!neighbors.length) return alert("Нет соседей!");
+            const target = neighbors[Math.floor(Math.random() * neighbors.length)];
+            if (!confirm(`Пригрозить ${target.flag} ${target.name}? -1 бомба.`)) return;
+            nukesBuilt--;
+            target.relation = Math.max(-100, target.relation - 25);
+            stats.diplomacy = Math.max(0, stats.diplomacy - 10);
+            if (Math.random() < 0.6) {
+                const gain = Math.floor(Math.random() * 16) + 10;
+                stats.treasury = Math.min(100, stats.treasury + gain);
+                alert(`⚠️ ${target.name} уступила! +${gain}💰, отн. -25.`);
+            } else {
+                stats.people = Math.max(0, stats.people - 8);
+                alert(`😠 ${target.name} отказалась! -8👥, отн. -25.`);
+            }
+            triggerHaptic('notification', 'warning');
+            updateUI(); renderNukePanel(); renderGeoData(); await saveGame();
+        }
+        async function nukeDisarm() {
+            if (nukesBuilt === 0) return;
+            if (!confirm(`Разоружиться? ${nukesBuilt} бомб будет уничтожено, +30🕊️, +10👥.`)) return;
+            nukesBuilt = 0;
+            nukeLevel = 0;
+            stats.diplomacy = Math.min(100, stats.diplomacy + 30);
+            stats.people = Math.min(100, stats.people + 10);
+            neighbors.forEach(n => { n.relation = Math.min(100, n.relation + 15); });
+            triggerHaptic('notification', 'success');
+            alert("🕊️ Разоружение! Мир приветствует вас.");
+            updateUI(); renderNukePanel(); renderGeoData(); await saveGame();
+        }
+
+        // ===== Взаимодействие со странами =====
+        async function interactCountry(id, type) {
+            const c = neighbors.find(x => x.id === id);
+            if (!c) return;
+            if (type === 'improve') {
+                if (stats.treasury < 8) return alert("Недостаточно Казны!");
+                stats.treasury -= 8;
+                c.relation = Math.min(100, c.relation + 10);
+                alert(`Отношения с ${c.name} улучшены! (+10)`);
+            } else if (type === 'worsen') {
+                c.relation = Math.max(-100, c.relation - 10);
+                stats.people = Math.min(100, stats.people + 8);
+                alert(`Отношения с ${c.name} ухудшены! (-10), +8👥`);
+            } else if (type === 'trade') {
+                if (c.relation < 0) return alert("Слишком плохие отношения!");
+                stats.treasury = Math.min(100, stats.treasury + 15);
+                c.relation = Math.max(-100, c.relation - 5);
+                alert(`Торговля с ${c.name}! (+15💰, -5)`);
+            } else if (type === 'spy') {
+                if (stats.military < 10) return alert("Недостаточно Армии!");
+                stats.military -= 10;
+                c.relation = Math.max(-100, c.relation + 12);
+                alert(`Шпионаж! (+12 отн., -10⚔️)`);
+            } else if (type === 'war') {
+                if (c.relation > -50) return alert("Нужны отношения -50 или хуже!");
+                if (stats.military < 25) return alert("Армия слаба!");
+                stats.military = Math.max(0, stats.military - 25);
+                stats.treasury = Math.min(100, stats.treasury + 30);
+                c.relation = Math.max(-100, c.relation - 30);
+                alert(`Победа над ${c.name}! (+30💰, -25⚔️, -30 отн.)`);
+            } else if (type === 'capture') {
+                if (c.relation < 30) return alert("Нужны отношения +30!");
+                if (stats.military < 30) return alert("Нужно 30+ Армии!");
+                if (!confirm(`Захватить ${c.name}? -30⚔️.`)) return;
+                stats.military = Math.max(0, stats.military - 30);
+                territories.push({
+                    id: c.id, name: c.name, flag: c.flag,
+                    bonus: { treasury: 1, people: 1 }, level: 1
+                });
+                neighbors = neighbors.filter(n => n.id !== c.id);
+                triggerHaptic('notification', 'success');
+                alert(`🏴 ${c.name} захвачена!`);
+            }
+            triggerHaptic('impact', 'medium');
+            updateUI(); renderGeoData(); await saveGame();
+        }
+
+        async function investTerritory(index) {
+            const t = territories[index];
+            if (!t) return;
+            if (stats.treasury < 10) return alert("Недостаточно Казны!");
+            stats.treasury -= 10;
+            t.level = (t.level || 1) + 1;
+            const keys = Object.keys(t.bonus);
+            const key = keys[Math.floor(Math.random() * keys.length)];
+            t.bonus[key] = (t.bonus[key] || 0) + 1;
+            triggerHaptic('impact', 'medium');
+            alert(`Инвестиции в ${t.name}! Уровень ${t.level}.`);
+            updateUI(); renderGeoData(); await saveGame();
+        }
+
+        async function releaseTerritory(index) {
+            const t = territories[index];
+            if (!t) return;
+            if (!confirm(`Отпустить ${t.name}? +15🕊️.`)) return;
+            territories.splice(index, 1);
+            stats.diplomacy = Math.min(100, stats.diplomacy + 15);
+            neighbors.push({
+                id: t.id, name: t.name, flag: t.flag,
+                desc: 'Освобождённая территория',
+                relation: 20, nuke: 0
+            });
+            triggerHaptic('notification', 'success');
+            alert(`${t.name} отпущена! +15🕊️`);
+            updateUI(); renderGeoData(); await saveGame();
+        }
+
+        async function toggleOrg(id) {
+            const o = orgs.find(x => x.id === id);
+            if (!o) return;
+            if (!o.joined) {
+                if (stats.treasury < o.cost) return alert("Недостаточно денег!");
+                stats.treasury -= o.cost;
+                o.joined = true;
+                alert(`Вступили в ${o.name}!`);
+            } else {
+                o.joined = false;
+                alert(`Вышли из ${o.name}.`);
+            }
+            triggerHaptic('impact', 'medium');
+            updateUI(); renderGeoData(); await saveGame();
+        }
+
+        async function campaignAction(type) {
+            if (type === 'honest') {
+                if (stats.treasury < 15) return alert("Нехватка Казны!");
+                stats.treasury -= 15;
+                stats.people = Math.min(100, stats.people + 15);
+                alert("Честная агитация! +15%.");
+            } else if (type === 'bribe') {
+                if (stats.treasury < 25) return alert("Нехватка Казны!");
+                stats.treasury -= 25;
+                stats.people = Math.min(100, stats.people + 30);
+                alert("Подкуп! +30%.");
+            } else if (type === 'admin') {
+                if (stats.military < 15) return alert("Нехватка Силовиков!");
+                stats.military -= 15;
+                stats.people = Math.min(100, stats.people + 20);
+                alert("Админресурс! +20%.");
+            }
+            triggerHaptic('impact', 'medium');
+            updateUI(); renderGeoData(); await saveGame();
+        }
+
+        // ===== Награды =====
+        function showPerkRewardModal() {
+            triggerHaptic('notification', 'success');
+            const unowned = availablePerks.filter(p => !inventory.some(i => i.id === p.id));
+            if (unowned.length === 0) {
+                checkGameOver().then(isOver => {
+                    if (!isOver) { nextCard(); saveGame(); }
+                });
+                return;
+            }
+            const container = document.getElementById('perksOptions');
+            container.innerHTML = '';
+            unowned.slice(0, 2).forEach(perk => {
+                const btn = document.createElement('div');
+                btn.className = 'perk-btn';
+                btn.innerHTML = `<span style="font-size:1.4rem;">${perk.icon}</span>
+                    <div>
+                        <div style="font-weight:700; font-size:0.85rem;">${perk.name}</div>
+                        <div style="font-size:0.7rem; color:var(--text-muted);">${perk.desc}</div>
+                    </div>`;
+                btn.onclick = async () => {
+                    inventory.push(perk);
+                    document.getElementById('perkModal').style.display = 'none';
+                    renderInventory();
+                    if (!(await checkGameOver())) { nextCard(); await saveGame(); }
+                };
+                container.appendChild(btn);
+            });
+            document.getElementById('perkModal').style.display = 'flex';
+        }
+        function renderInventory() {
+            const container = document.getElementById('inventoryItems');
+            if (inventory.length === 0) {
+                container.innerHTML = `<span style="font-size: 0.7rem; color: var(--text-muted);">каждые 25 ходов</span>`;
+                return;
+            }
+            container.innerHTML = '';
+            inventory.forEach(item => {
+                const badge = document.createElement('div');
+                badge.className = 'item-badge';
+                badge.innerHTML = item.icon;
+                badge.onclick = () => alert(`${item.name}\n\n${item.desc}`);
+                container.appendChild(badge);
+            });
+            updatePredictions();
+        }
+
+        // ===== Карточки =====
+        function nextCard() {
+            // Сначала проверяем редкое событие (3% шанс), но не чаще 1 раза в 20 ходов
+            const rareChance = (turns >= 5 && turns % 20 !== 0) ? 0.03 : 0;
+            if (Math.random() < rareChance) {
+                triggerRareCard();
+                displayCard();
+                return;
+            }
+            if (turns > 0 && turns % 40 === 0 && !activeCrisis) {
+                const c = crisisEvents[Math.floor(Math.random() * crisisEvents.length)];
+                activeCrisis = { name: c.name, stat: c.stat, turnsLeft: 4 };
+                currentCard = c;
+            } else {
+                currentCard = getRandomCard();
+            }
+            displayCard();
+        }
+        function displayCard() {
+            if (!currentCard) return;
+            document.getElementById('cardAvatar').innerText = currentCard.avatar;
+            document.getElementById('cardRole').innerText = currentCard.role || "Чиновник";
+            document.getElementById('cardText').innerText = currentCard.text;
+            labelLeft.innerText = currentCard.left.text;
+            labelRight.innerText = currentCard.right.text;
+            document.getElementById('btnLeftText').innerText = `⬅️ ${currentCard.left.text}`;
+            document.getElementById('btnRightText').innerText = `${currentCard.right.text} ➡️`;
+            updatePredictions();
+        }
+        function updatePredictions() {
+            const pLeft = document.getElementById('predictLeft');
+            const pRight = document.getElementById('predictRight');
+            const hasOracle = inventory.some(i => i.type === 'oracle');
+            if (!hasOracle || !currentCard) {
+                pLeft.innerText = ''; pRight.innerText = '';
+                return;
+            }
+            pLeft.innerText = getImpactText(currentCard.left);
+            pRight.innerText = getImpactText(currentCard.right);
+        }
+        function getImpactText(choice) {
+            if (!choice || !choice.effects) return '';
+            const icons = { people: '👥', military: '⚔️', treasury: '💰', diplomacy: '🕊️' };
+            let res = [];
+            for (let k in choice.effects) {
+                if (choice.effects[k] !== 0) res.push(icons[k]);
+            }
+            return res.join(' ');
+        }
+        function updateUI() {
+            const years = Math.floor(turns / 2);
+            document.getElementById('turnsCounter').innerText = `Ход: ${turns} (${years} лет)`;
+            document.getElementById('electionsTimer').innerText = `🗳️ Выборы через: ${electionTurnsLeft} х.`;
+            document.getElementById('highScoreText').innerText = `Рекорд: ${bestRecord} лет`;
+            if (playerCountry) {
+                const nukeTag = nukesBuilt > 0 ? ` <span class="nuke-badge">☢️${nukesBuilt}</span>` : '';
+                document.getElementById('countryHeader').innerHTML = `${playerCountry.flag} ${playerCountry.name}${territories.length ? ' +' + territories.length + ' терр.' : ''}${nukeTag}`;
+            }
+            const banner = document.getElementById('crisisBanner');
+            if (activeCrisis) {
+                banner.style.display = 'block';
+                banner.innerText = `⚠️ ${activeCrisis.name.toUpperCase()}: -15% каждый ход (${activeCrisis.turnsLeft} х.)`;
+            } else banner.style.display = 'none';
+
+            for (let k in stats) {
+                const val = Math.max(0, Math.min(100, stats[k]));
+                const bar = document.getElementById(`bar-${k}`);
+                const valEl = document.getElementById(`val-${k}`);
+                bar.style.width = val + '%';
+                valEl.innerText = `${val} / 100`;
+                if (val <= 20 || val >= 80) bar.style.backgroundColor = '#ef4444';
+                else bar.style.backgroundColor = '#10b981';
+            }
+        }
+
+        // ===== Конец игры =====
+        async function checkGameOver() {
+            for (let k in stats) {
+                if (stats[k] <= 0) {
+                    const idx = inventory.findIndex(i => i.stat === k && i.type === 'min');
+                    if (idx !== -1) {
+                        const item = inventory[idx];
+                        stats[k] = 30;
+                        inventory.splice(idx, 1);
+                        renderInventory(); updateUI(); await saveGame();
+                        triggerHaptic('notification', 'success');
+                        alert(`✨ АРТЕФАКТ СПАС ВАС!\n\n"${item.name}" использован!`);
+                        return false;
+                    }
+                }
+                if (stats[k] >= 100) {
+                    const idx = inventory.findIndex(i => i.stat === k && i.type === 'max');
+                    if (idx !== -1) {
+                        const item = inventory[idx];
+                        stats[k] = 70;
+                        inventory.splice(idx, 1);
+                        renderInventory(); updateUI(); await saveGame();
+                        triggerHaptic('notification', 'success');
+                        alert(`✨ АРТЕФАКТ СПАС ВАС!\n\n"${item.name}" спас!`);
+                        return false;
+                    }
+                }
+            }
+            let title = "", desc = "";
+            if (stats.people <= 0) { title = "💀 Революция"; desc = "Народ штурмует дворец!"; }
+            else if (stats.people >= 100) { title = "💀 Анархия"; desc = "Народ решил, что правитель не нужен."; }
+            else if (stats.military <= 0) { title = "💀 Вторжение"; desc = "Без армии страна захвачена."; }
+            else if (stats.military >= 100) { title = "💀 Военный Переворот"; desc = "Генералы взяли власть."; }
+            else if (stats.treasury <= 0) { title = "💀 Дефолт"; desc = "Госбюджет пуст."; }
+            else if (stats.treasury >= 100) { title = "💀 Заговор Олигархов"; desc = "Олигархи выкупили государство."; }
+            else if (stats.diplomacy <= 0) { title = "💀 Блокада"; desc = "Полная изоляция."; }
+            else if (stats.diplomacy >= 100) { title = "💀 Потеря независимости"; desc = "Страна в составе глобального союза."; }
+            if (title !== "") {
+                await triggerGameOverUI(title, desc);
+                return true;
+            }
+            return false;
+        }
+        async function triggerGameOverUI(title, desc) {
+            triggerHaptic('notification', 'error');
+            await clearSave();
+            const years = Math.floor(turns / 2);
+            if (years > bestRecord) {
+                bestRecord = years;
+                await saveStorage('president_record', bestRecord);
+            }
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalDesc').innerHTML = `${desc}<br><br><strong>${playerCountry ? playerCountry.name + ': ' : ''}Срок: ${years} лет (${turns} ходов)<br>Территорий: ${territories.length} | Боеголовок: ${nukesBuilt}</strong>`;
+            document.getElementById('loseModal').style.display = 'flex';
+        }
+
+        // ===== Инициализация =====
+        async function initGame() {
+            const savedRecord = await getStorage('president_record');
+            if (savedRecord) bestRecord = parseInt(savedRecord, 10) || 0;
+
+            const loaded = await loadGame();
+            if (loaded && playerCountry) {
+                document.getElementById('startModal').style.display = 'none';
+                document.getElementById('countryHeader').innerText = `${playerCountry.flag} ${playerCountry.name}`;
+                renderInventory();
+                updateUI();
+                nextCard();
+            } else {
+                renderCountryPicker();
+                document.getElementById('startModal').style.display = 'flex';
+            }
+        }
+
+        // Клик по баннеру редкого события
+        document.getElementById('rareBanner').addEventListener('click', openRareModal);
+
+        initGame();
+    </script>
+</body>
+</html>
